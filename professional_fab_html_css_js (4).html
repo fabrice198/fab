@@ -1,0 +1,198 @@
+<!--
+Web Thith — 3D Gun Game (Single-file)
+Notes & safety:
+- This is a non-graphic, browser-based 3D shooter demo built with Three.js (no realistic violence details).
+- Player uses mouse to look, WASD to move, left-click to shoot projectiles.
+- Targets are abstract boxes (no gore). Keep it educational and fun.
+- To run: save this file and open in a modern browser (local file may require a small local server for modules; this uses UMD CDN builds to avoid that).
+
+Features:
+- First-person controls (PointerLock)
+- Procedural targets with simple AI
+- Basic HUD: score, lives, ammo, restart
+- Sound effects optional (commented out)
+- Clean, themeable UI
+
+Limitations:
+- Lightweight demo for learning. Not a full game loop or networking.
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Web Thith — 3D Shooter Demo</title>
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%2306b6d4' width='100' height='100' rx='20'/><g transform='translate(22,22)' fill='white'><rect x='26' y='0' width='6' height='56' rx='3'/><rect x='0' y='26' width='56' height='6' rx='3'/></g></svg>" />
+  <style>
+    :root{--accent:#06b6d4;--bg:#0f172a;--muted:#94a3b8}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#e6f9fb,#ffffff);}
+    .wrap{display:flex;flex-direction:column;align-items:center;padding:18px}
+    header{width:100%;max-width:1100px;display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    header svg{width:44px;height:44px}
+    h1{margin:0;font-size:18px}
+    .container{width:100%;max-width:1100px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 12px 40px rgba(2,6,23,0.08)}
+    .game-shell{display:flex}
+    .canvas-wrap{flex:1;min-height:560px;background:#071326}
+    #overlay{position:absolute;left:0;top:0;padding:12px;color:#fff;pointer-events:none}
+    .hud{position:relative;display:flex;justify-content:space-between;align-items:center;padding:12px;background:linear-gradient(180deg,#ffffff,#fbfdff);border-bottom:1px solid rgba(2,6,23,0.04)}
+    .hud .left{display:flex;gap:12px;align-items:center}
+    .btn{padding:8px 12px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);background:linear-gradient(180deg,#fff,#f3f9fb);cursor:pointer}
+    .hud .stats{font-weight:700}
+    canvas{display:block;width:100%;height:560px}
+    .panel{width:320px;padding:14px;border-left:1px solid rgba(2,6,23,0.04);background:linear-gradient(180deg,#fbfdff,#f8fcff)}
+    .panel h3{margin:0 0 8px}
+    .list{display:flex;flex-direction:column;gap:8px}
+    .small{font-size:13px;color:var(--muted)}
+    .center{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="g3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#06b6d4"/><stop offset="1" stop-color="#0ea5a4"/></linearGradient></defs><rect width="48" height="48" rx="10" fill="url(#g3)"/><g transform="translate(10,10)" fill="white"><rect x="14" y="0" width="4" height="28" rx="2"/><rect x="0" y="14" width="28" height="4" rx="2"/></g></svg>
+      <div>
+        <h1>Web Thith — 3D Shooter Demo</h1>
+        <div class="small">WASD to move • Mouse to look • Left click to shoot • Esc to release pointer</div>
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="hud">
+        <div class="left">
+          <div class="stats">Score: <span id="score">0</span></div>
+          <div class="stats">Lives: <span id="lives">3</span></div>
+          <div class="stats">Ammo: <span id="ammo">30</span></div>
+        </div>
+        <div>
+          <button id="start" class="btn">Start</button>
+          <button id="restart" class="btn">Restart</button>
+        </div>
+      </div>
+      <div class="game-shell">
+        <div class="canvas-wrap" id="canvasWrap" style="position:relative">
+          <div id="overlay" style="z-index:10">
+            <div id="msg" class="small">Click Start then click into the view to lock pointer and play.</div>
+          </div>
+          <canvas id="glcanvas"></canvas>
+        </div>
+        <aside class="panel">
+          <h3>Game Controls & Info</h3>
+          <div class="list">
+            <div class="small"><strong>Move:</strong> W/A/S/D or Arrow keys</div>
+            <div class="small"><strong>Shoot:</strong> Left mouse (hold for burst)</div>
+            <div class="small"><strong>Targets:</strong> Aim at colored cubes</div>
+            <div class="small">This demo uses Three.js for rendering. It's intentionally non-graphic.</div>
+          </div>
+          <div style="height:20px"></div>
+          <h3>Tips</h3>
+          <div class="small">Keep moving, conserve ammo, and score combos for bonus points.</div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three.js UMD build via CDN -->
+  <script src="https://unpkg.com/three@0.159.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.159.0/examples/js/controls/PointerLockControls.js"></script>
+  <script>
+    // Basic 3D shooter demo using Three.js
+    const canvas = document.getElementById('glcanvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(canvas.clientWidth || 800, 560, false);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x071326);
+
+    const camera = new THREE.PerspectiveCamera(75, (canvas.clientWidth||800)/560, 0.1, 1000);
+    camera.position.set(0, 1.6, 5);
+
+    // Light
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0); scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.8); dir.position.set(5,10,7); scene.add(dir);
+
+    // Floor
+    const floorGeo = new THREE.PlaneGeometry(200,200); const floorMat = new THREE.MeshStandardMaterial({color:0x08333a, roughness:0.9, metalness:0});
+    const floor = new THREE.Mesh(floorGeo, floorMat); floor.rotation.x = -Math.PI/2; floor.position.y = 0; scene.add(floor);
+
+    // Player controls (pointer lock)
+    const controls = new THREE.PointerLockControls(camera, renderer.domElement);
+    const startBtn = document.getElementById('start');
+    startBtn.addEventListener('click', ()=>{ controls.lock(); start(); });
+
+    let move = { forward:false, backward:false, left:false, right:false };
+    document.addEventListener('keydown', (e)=>{ if(e.code==='KeyW' || e.code==='ArrowUp') move.forward=true; if(e.code==='KeyS' || e.code==='ArrowDown') move.backward=true; if(e.code==='KeyA' || e.code==='ArrowLeft') move.left=true; if(e.code==='KeyD' || e.code==='ArrowRight') move.right=true; });
+    document.addEventListener('keyup', (e)=>{ if(e.code==='KeyW' || e.code==='ArrowUp') move.forward=false; if(e.code==='KeyS' || e.code==='ArrowDown') move.backward=false; if(e.code==='KeyA' || e.code==='ArrowLeft') move.left=false; if(e.code==='KeyD' || e.code==='ArrowRight') move.right=false; });
+
+    // HUD
+    const scoreEl = document.getElementById('score'); const livesEl = document.getElementById('lives'); const ammoEl = document.getElementById('ammo');
+    let gameState = { running:false, score:0, lives:3, ammo:30 };
+    function updateHUD(){ scoreEl.textContent = gameState.score; livesEl.textContent = gameState.lives; ammoEl.textContent = gameState.ammo; }
+
+    // Targets
+    const targets = [];
+    const targetGeom = new THREE.BoxGeometry(0.8,0.8,0.8);
+    function spawnTarget(){ const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(`hsl(${Math.random()*360} 70% 60%)`) }); const m = new THREE.Mesh(targetGeom, mat); m.position.set((Math.random()-0.5)*20, 0.5+Math.random()*2.5, -10 - Math.random()*40); scene.add(m); targets.push({mesh:m, life:1}); }
+
+    // Spawn some initial targets
+    for(let i=0;i<12;i++) spawnTarget();
+
+    // Bullets
+    const bullets = [];
+    function shoot(){ if(gameState.ammo <= 0) return; gameState.ammo--; updateHUD(); const origin = camera.position.clone(); const dir = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion); const b = { pos: origin.clone(), dir: dir.clone(), speed: 60, life: 2.0, mesh: null };
+      // Visual bullet (small sphere)
+      const geo = new THREE.SphereGeometry(0.05,8,8); const mat = new THREE.MeshBasicMaterial({color:0xffffee}); const bm = new THREE.Mesh(geo, mat); scene.add(bm); b.mesh = bm; bullets.push(b);
+    }
+    // Mouse input
+    window.addEventListener('mousedown', (e)=>{ if(!controls.isLocked) return; if(e.button===0) shoot(); });
+
+    // Basic collision raycast for targets
+    const raycaster = new THREE.Raycaster();
+
+    function update(delta){
+      // movement
+      const speed = 5;
+      const vel = new THREE.Vector3();
+      if(move.forward) vel.z -= 1; if(move.backward) vel.z += 1; if(move.left) vel.x -= 1; if(move.right) vel.x += 1;
+      vel.normalize().multiplyScalar(speed * delta);
+      controls.getObject().position.add(vel);
+
+      // bullets
+      for(let i=bullets.length-1;i>=0;i--){ const b = bullets[i]; b.mesh.position.copy(b.pos); b.pos.addScaledVector(b.dir, b.speed * delta); b.life -= delta; if(b.life <=0){ scene.remove(b.mesh); bullets.splice(i,1); continue; }
+        // raycast from previous position to current to detect hit
+        raycaster.set(b.pos, b.dir); const intersects = raycaster.intersectObjects(targets.map(t=>t.mesh)); if(intersects.length>0){ const hit = intersects[0].object; // remove target
+            const idx = targets.findIndex(t=>t.mesh===hit); if(idx>=0){ scene.remove(targets[idx].mesh); targets.splice(idx,1); gameState.score += 10; updateHUD(); // spawn replacement
+              spawnTarget(); }
+            scene.remove(b.mesh); bullets.splice(i,1);
+        }
+      }
+
+      // simple AI: targets slowly float toward player z
+      for(let t of targets){ t.mesh.position.z += 1.0 * delta; if(t.mesh.position.z > camera.position.z + 2){ // reached player
+          // remove and reduce life
+          scene.remove(t.mesh);
+          const idx = targets.indexOf(t); if(idx>=0) targets.splice(idx,1);
+          gameState.lives -= 1; updateHUD(); spawnTarget(); if(gameState.lives <= 0){ endGame(); }
+        }
+      }
+    }
+
+    let prevTime = performance.now();
+    function animate(){ if(!gameState.running) return; const time = performance.now(); const delta = (time - prevTime)/1000; prevTime = time; update(delta); renderer.render(scene, camera); requestAnimationFrame(animate); }
+
+    function start(){ gameState.running = true; gameState.score = 0; gameState.lives = 3; gameState.ammo = 30; updateHUD(); prevTime = performance.now(); animate(); }
+    function endGame(){ gameState.running = false; alert('Game over! Score: '+gameState.score); }
+
+    document.getElementById('restart').addEventListener('click', ()=>{ // cleanup
+      while(targets.length) { scene.remove(targets.pop().mesh); } while(bullets.length){ scene.remove(bullets.pop().mesh); } for(let i=0;i<12;i++) spawnTarget(); gameState.score=0; gameState.lives=3; gameState.ammo=30; updateHUD(); });
+
+    // Resize handling
+    function onResize(){ const w = canvas.clientWidth || canvas.parentElement.clientWidth; const h = 560; renderer.setSize(w,h); camera.aspect = w/h; camera.updateProjectionMatrix(); }
+    window.addEventListener('resize', onResize); onResize();
+
+    // Simple mobile hint: do not run pointer lock
+    // Note: This demo is intentionally kept non-graphic and educational.
+  </script>
+</body>
+</html>

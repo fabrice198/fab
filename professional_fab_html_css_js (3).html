@@ -1,0 +1,336 @@
+<!--
+Web Thith Arcade — Professional Single-file Game
+Features:
+- Three mini-games in one file: Dodge, Clicker, Memory Match
+- Shared polished UI with header and favicon
+- Clean responsive layout, keyboard + mouse controls
+- Canvas-based game area for Dodge and Clicker; DOM for Memory
+- Simple score, lives, high-score (localStorage)
+- Accessible buttons, pause, and instructions
+
+Usage: open this file in a browser.
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Web Thith Arcade — Mini Games</title>
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%2306b6d4' width='100' height='100' rx='20'/><g transform='translate(22,22)' fill='white'><rect x='26' y='0' width='6' height='56' rx='3'/><rect x='0' y='26' width='56' height='6' rx='3'/></g></svg>" />
+  <style>
+    :root{
+      --accent: #06b6d4;
+      --accent-2: #0ea5a4;
+      --muted: #64748b;
+      --bg: linear-gradient(180deg,#f7f9fb,#ffffff);
+      --card: #ffffff;
+      --radius:12px;
+      --glass: rgba(255,255,255,0.7);
+      --max-width:1100px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:#0f172a;display:flex;flex-direction:column;align-items:center;padding:28px}
+    .site{width:100%;max-width:var(--max-width)}
+    header{display:flex;align-items:center;gap:12px;padding:12px 16px;margin-bottom:18px;background:var(--glass);border-radius:var(--radius);box-shadow:0 8px 24px rgba(2,6,23,0.04)}
+    header svg{width:40px;height:40px}
+    .title{font-weight:700;font-size:18px}
+    .subtitle{font-size:13px;color:var(--muted)}
+
+    .layout{display:grid;grid-template-columns:300px 1fr;gap:18px}
+    @media(max-width:880px){.layout{grid-template-columns:1fr;}}
+
+    .panel{background:var(--card);padding:16px;border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.04)}
+    .menu{display:flex;flex-direction:column;gap:8px}
+    .menu button{padding:10px 12px;border-radius:10px;border:1px solid rgba(2,6,23,0.06);background:linear-gradient(180deg,#fff,#fbfdff);cursor:pointer;font-weight:600}
+    .menu button[aria-pressed='true']{background:linear-gradient(180deg,var(--accent),var(--accent-2));color:white;border-color:rgba(255,255,255,0.08)}
+
+    .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .meta .chip{background:#f1f5f9;padding:8px 10px;border-radius:999px;font-size:13px}
+
+    /* Game area */
+    .game-area{min-height:420px;display:flex;flex-direction:column;gap:12px}
+    .hud{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.9),rgba(255,255,255,0.75));border:1px solid rgba(2,6,23,0.03)}
+    .hud .left{display:flex;gap:8px;align-items:center}
+    .hud .btn{padding:8px 10px;border-radius:8px;background:#fff;border:1px solid rgba(2,6,23,0.06);cursor:pointer}
+
+    canvas{width:100%;height:360px;border-radius:10px;background:linear-gradient(180deg,#e6f7f8, #ffffff);display:block}
+
+    /* Memory game grid */
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:8px}
+    .card{background:linear-gradient(180deg,#ffffff,#f8fafc);border-radius:8px;padding:18px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:22px;cursor:pointer;user-select:none;border:1px solid rgba(2,6,23,0.04)}
+    .card.flipped{background:linear-gradient(180deg,var(--accent),var(--accent-2));color:white}
+
+    footer{margin-top:18px;font-size:13px;color:var(--muted)}
+
+  </style>
+</head>
+<body>
+  <div class="site">
+    <header>
+      <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs><linearGradient id="g2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#06b6d4"/><stop offset="1" stop-color="#0ea5a4"/></linearGradient></defs>
+        <rect width="48" height="48" rx="10" fill="url(#g2)"/>
+        <g transform="translate(10,10)" fill="white"><rect x="14" y="0" width="4" height="28" rx="2"/><rect x="0" y="14" width="28" height="4" rx="2"/></g>
+      </svg>
+      <div>
+        <div class="title">Web Thith Arcade</div>
+        <div class="subtitle">Three polished mini-games — Dodge, Clicker, Memory</div>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="panel">
+        <div style="font-weight:700;margin-bottom:8px">Games</div>
+        <nav class="menu" role="tablist" aria-label="Game selector">
+          <button id="mode-dodge" role="tab" aria-pressed="true">Dodge (Keyboard)</button>
+          <button id="mode-click" role="tab" aria-pressed="false">Clicker (Mouse / Tap)</button>
+          <button id="mode-memory" role="tab" aria-pressed="false">Memory Match</button>
+        </nav>
+
+        <div class="meta">
+          <div class="chip">High Score: <strong id="highscore">0</strong></div>
+          <div class="chip">Lives: <strong id="lives">3</strong></div>
+        </div>
+
+        <div style="margin-top:12px">
+          <div style="font-weight:700;margin-bottom:6px">Controls</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.5">
+            <strong>Dodge:</strong> Arrow keys / WASD to move, avoid falling blocks.<br>
+            <strong>Clicker:</strong> Click or tap the targets to score.<br>
+            <strong>Memory:</strong> Flip cards and match pairs.
+          </div>
+        </div>
+      </aside>
+
+      <main>
+        <section class="panel game-area" aria-live="polite">
+          <div class="hud">
+            <div class="left">
+              <div>Mode: <strong id="modeLabel">Dodge</strong></div>
+              <div style="width:10px"></div>
+              <div>Score: <strong id="score">0</strong></div>
+            </div>
+            <div>
+              <button class="btn" id="startBtn">Start</button>
+              <button class="btn" id="pauseBtn">Pause</button>
+            </div>
+          </div>
+
+          <!-- Canvas area for Dodge & Clicker -->
+          <canvas id="gameCanvas" width="960" height="540" aria-label="Game canvas"></canvas>
+
+          <!-- Memory game area (DOM) -->
+          <div id="memoryArea" style="display:none">
+            <div class="grid" id="cardGrid"></div>
+          </div>
+
+        </section>
+      </main>
+    </div>
+
+    <footer>Built with plain HTML, CSS, and JavaScript. Local high-score stored in your browser.</footer>
+  </div>
+
+  <script>
+    // Shared state
+    const state = {
+      mode: 'dodge', // 'dodge' | 'click' | 'memory'
+      running: false,
+      paused: false,
+      score: 0,
+      lives: 3,
+      highscore: Number(localStorage.getItem('wt_highscore') || 0)
+    };
+
+    // UI elements
+    const modeLabel = document.getElementById('modeLabel');
+    const scoreEl = document.getElementById('score');
+    const livesEl = document.getElementById('lives');
+    const highEl = document.getElementById('highscore');
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+
+    highEl.textContent = state.highscore;
+    livesEl.textContent = state.lives;
+
+    // Mode selector buttons
+    const modes = { dodge: document.getElementById('mode-dodge'), click: document.getElementById('mode-click'), memory: document.getElementById('mode-memory') };
+    Object.entries(modes).forEach(([key,btn])=>{
+      btn.addEventListener('click', ()=>{ selectMode(key); });
+    });
+
+    function selectMode(key){
+      state.mode = key;
+      modeLabel.textContent = key.charAt(0).toUpperCase()+key.slice(1);
+      Object.values(modes).forEach(b=>b.setAttribute('aria-pressed','false'));
+      modes[key].setAttribute('aria-pressed','true');
+      // Show/hide memory grid
+      document.getElementById('memoryArea').style.display = (key==='memory')? 'block':'none';
+      // For canvas-based modes clear canvas
+      if(key !== 'memory') ctx.clearRect(0,0,canvas.width,canvas.height);
+      reset();
+    }
+
+    // Start / Pause
+    startBtn.addEventListener('click', ()=>{ startGame(); });
+    pauseBtn.addEventListener('click', ()=>{ togglePause(); });
+
+    function startGame(){
+      reset();
+      state.running = true; state.paused = false;
+      startBtn.textContent = 'Restart';
+      pauseBtn.disabled = false;
+      if(state.mode === 'memory') initMemory();
+      else requestAnimationFrame(loop);
+    }
+    function reset(){
+      state.score = 0; state.lives = 3; scoreEl.textContent = 0; livesEl.textContent = 3; state.paused = false; state.running = false;
+      // reset mode-specific
+      dodge.reset(); clicker.reset(); memory.reset();
+    }
+    function togglePause(){
+      if(!state.running) return;
+      state.paused = !state.paused;
+      pauseBtn.textContent = state.paused? 'Resume' : 'Pause';
+      if(!state.paused) requestAnimationFrame(loop);
+    }
+
+    // Shared helpers
+    function addScore(n){ state.score += n; scoreEl.textContent = state.score; if(state.score > state.highscore){ state.highscore = state.score; localStorage.setItem('wt_highscore', state.highscore); highEl.textContent = state.highscore;} }
+    function loseLife(){ state.lives--; livesEl.textContent = state.lives; if(state.lives <= 0) gameOver(); }
+    function gameOver(){ state.running = false; alert('Game over! Score: '+state.score); }
+
+    // ----------------- Dodge Game (keyboard, canvas) -----------------
+    const dodge = (()=>{
+      const player = { x:480, y:460, w:34, h:34, speed:6 };
+      let obstacles = []; let spawnTimer=0; let spawnInterval=60; // frames
+      const keys = {};
+
+      function reset(){ player.x = canvas.width/2; player.y = canvas.height - 70; obstacles = []; spawnTimer=0; }
+
+      window.addEventListener('keydown',(e)=>{ if(state.mode==='dodge') keys[e.key.toLowerCase()] = true; });
+      window.addEventListener('keyup',(e)=>{ if(state.mode==='dodge') keys[e.key.toLowerCase()] = false; });
+
+      function update(){
+        // movement
+        if(keys['arrowleft']||keys['a']) player.x -= player.speed;
+        if(keys['arrowright']||keys['d']) player.x += player.speed;
+        if(keys['arrowup']||keys['w']) player.y -= player.speed;
+        if(keys['arrowdown']||keys['s']) player.y += player.speed;
+        // bounds
+        player.x = Math.max(10, Math.min(canvas.width - player.w - 10, player.x));
+        player.y = Math.max(10, Math.min(canvas.height - player.h - 10, player.y));
+
+        // spawn obstacles
+        spawnTimer++;
+        if(spawnTimer > spawnInterval){
+          spawnTimer = 0; spawnInterval = Math.max(20, 60 - Math.floor(state.score/5));
+          obstacles.push({ x: Math.random()*(canvas.width-40)+20, y:-30, w:30+Math.random()*30, h:30+Math.random()*30, speed:2+Math.random()*3 });
+        }
+
+        // update obstacles
+        for(let i=obstacles.length-1;i>=0;i--){
+          obstacles[i].y += obstacles[i].speed;
+          // collision
+          if(rectIntersect(player,obstacles[i])){ obstacles.splice(i,1); loseLife(); }
+          else if(obstacles[i].y > canvas.height + 50){ obstacles.splice(i,1); addScore(1); }
+        }
+      }
+
+      function draw(){
+        // player
+        ctx.fillStyle = '#06b6d4'; ctx.fillRect(player.x, player.y, player.w, player.h);
+        // obstacles
+        ctx.fillStyle = '#0ea5a4';
+        obstacles.forEach(o=> ctx.fillRect(o.x,o.y,o.w,o.h));
+      }
+
+      function rectIntersect(a,b){ return !(a.x + a.w < b.x || a.x > b.x + b.w || a.y + a.h < b.y || a.y > b.y + b.h); }
+
+      return { update, draw, reset };
+    })();
+
+    // ----------------- Clicker Game (click targets on canvas) -----------------
+    const clicker = (()=>{
+      let targets = []; let spawnTimer=0; let spawnInterval=80; // frames
+
+      function reset(){ targets = []; spawnTimer=0; }
+
+      canvas.addEventListener('click',(e)=>{
+        if(state.mode !== 'click' || !state.running || state.paused) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+        for(let i=targets.length-1;i>=0;i--){ const t = targets[i]; const dx = x - t.x; const dy = y - t.y; if(Math.hypot(dx,dy) < t.r){ targets.splice(i,1); addScore(2); break; }}
+      });
+
+      function update(){
+        spawnTimer++;
+        if(spawnTimer > spawnInterval){ spawnTimer=0; spawnInterval=Math.max(30,80 - Math.floor(state.score/3)); spawnTarget(); }
+        for(let i=targets.length-1;i>=0;i--){ targets[i].life--; if(targets[i].life<=0){ targets.splice(i,1); loseLife(); }}
+      }
+      function spawnTarget(){ targets.push({ x:50+Math.random()*(canvas.width-100), y:50+Math.random()*(canvas.height-140), r:18+Math.random()*16, life:180 }); }
+      function draw(){ ctx.fillStyle='#fff'; targets.forEach(t=>{ ctx.beginPath(); ctx.fillStyle='rgba(6,182,212,0.16)'; ctx.arc(t.x,t.y,t.r+6,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.fillStyle='#06b6d4'; ctx.arc(t.x,t.y,t.r,0,Math.PI*2); ctx.fill(); }); }
+
+      return { update, draw, reset };
+    })();
+
+    // ----------------- Memory Match (DOM grid) -----------------
+    const memory = (()=>{
+      const grid = document.getElementById('cardGrid');
+      let deck = []; let first = null; let lock=false; let pairsFound=0;
+
+      function reset(){ grid.innerHTML=''; deck=[]; first=null; lock=false; pairsFound=0; }
+
+      function init(){
+        reset();
+        const symbols = ['★','♫','☀','✿','◆','✦','⚑','☯'];
+        deck = symbols.concat(symbols).sort(()=>Math.random()-0.5);
+        deck.forEach((s,i)=>{
+          const card = document.createElement('div'); card.className='card'; card.setAttribute('data-symbol',s);
+          card.tabIndex=0; card.textContent='';
+          card.addEventListener('click', ()=> flip(card));
+          card.addEventListener('keydown',(e)=>{ if(e.key==='Enter' || e.key===' ') flip(card); });
+          grid.appendChild(card);
+        });
+      }
+
+      function flip(card){ if(lock || card.classList.contains('flipped')) return; card.classList.add('flipped'); card.textContent = card.getAttribute('data-symbol');
+        if(!first){ first = card; }
+        else{ if(first.getAttribute('data-symbol') === card.getAttribute('data-symbol')){ // matched
+            first=null; pairsFound++; addScore(5);
+            if(pairsFound === (grid.children.length/2)) { alert('You matched all pairs! Score: '+state.score); }
+          } else { lock=true; setTimeout(()=>{ card.classList.remove('flipped'); card.textContent=''; first.classList.remove('flipped'); first.textContent=''; first=null; lock=false; },700); }
+        }
+      }
+
+      return { init, reset };
+    })();
+
+    // ----------------- Game Loop -----------------
+    let last = 0;
+    function loop(ts){
+      if(!state.running || state.paused) return; // stop if not running
+      // simple fixed-step style
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      if(state.mode === 'dodge'){
+        dodge.update(); dodge.draw();
+      } else if(state.mode === 'click'){
+        clicker.update(); clicker.draw();
+      }
+      requestAnimationFrame(loop);
+    }
+
+    // initialize defaults
+    selectMode('dodge');
+    pauseBtn.disabled = true;
+
+    // Start with a small instructions overlay drawn once
+    ctx.font = '16px Inter, system-ui, Arial'; ctx.fillStyle = '#0f172a'; ctx.fillText('Press Start to play — use controls on the left to switch games',20,40);
+
+  </script>
+</body>
+</html>
