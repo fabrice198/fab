@@ -1,0 +1,12 @@
+<script>
+    const person={
+        fullname:function(city){
+            document.write(this.first+" "+this.last+" from<br>"+city);
+        }
+    };
+    const user={first:"<center><b>JOHN ",last:"KABERA</b> ,"};
+    person.fullname.apply(user,["<b>KIGALI<br>"]);
+    let nbr=[1,2,5,6,8,9];
+    let max=Math.max.apply(null,nbr);
+    document.write("did you know that the greatest number between [1,2,9,5,6,8,] is "+max);
+</script>

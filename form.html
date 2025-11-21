@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MyGram Auth System</title>
+<style>
+/* ---------- GLOBAL + DARK MODE ---------- */
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Arial, sans-serif;
+    padding-top: 50px;
+    display: flex;
+    justify-content: center;
+    transition: 0.3s;
+}
+:root {
+    --bg: #fafafa;
+    --text: #000;
+    --box: #fff;
+    --border: #dbdbdb;
+}
+body.dark {
+    --bg: #121212;
+    --text: #fff;
+    --box: #1f1f1f;
+    --border: #333;
+}
+/* ---------- CARD ---------- */
+.card-box {
+    width: 360px;
+    padding: 40px;
+    background: var(--box);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-align: center;
+    animation: fade 0.4s ease;
+}
+@keyframes fade { from {opacity:0;transform:translateY(15px);} to{opacity:1;transform:translateY(0);} }
+/* ---------- INPUT / BUTTONS ---------- */
+input {
+    width: 100%;
+    padding: 10px;
+    margin: 6px 0;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 6px;
+    border: none;
+    background: #0095f6;
+    color: white;
+    font-weight: bold;
+}
+button:hover { background: #0078cc; }
+/* ---------- LOGO ---------- */
+.logo { font-family: "Billabong", cursive; font-size: 50px; margin-bottom: 25px; }
+/* ---------- LINKS ---------- */
+.link-box {
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    background: var(--box);
+}
+a { color: #0095f6; text-decoration: none; font-weight: bold; }
+/* ---------- PASSWORD STRENGTH ---------- */
+#strength { margin-top: 5px; font-weight: bold; }
+/* ---------- PASSWORD TOGGLE ICON ---------- */
+.pass-container { position: relative; }
+.pass-container span {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    user-select: none;
+}
+</style>
+</head>
+
+<body>
+
+<!-- -------------------- SIGNUP FORM -------------------- -->
+<div id="signupBox" class="card-box">
+    <div class="logo">MyGram</div>
+
+    <input id="su_email" placeholder="Email">
+    <input id="su_fullname" placeholder="Full Name">
+    <input id="su_username" placeholder="Username">
+
+    <div class="pass-container">
+        <input id="su_password" type="password" placeholder="Password" onkeyup="checkStrength()" style="padding-right:40px;">
+        <span onclick="toggleSignupPass()">👁️</span>
+    </div>
+    <div id="strength"></div>
+
+    <button onclick="signup()">Sign Up</button>
+
+    <div class="link-box">
+        Already have an account?
+        <a href="#" onclick="switchToLogin()">Log in</a>
+    </div>
+
+    <button onclick="toggleDark()">🌙 Dark Mode</button>
+</div>
+
+<!-- -------------------- LOGIN FORM -------------------- -->
+<div id="loginBox" class="card-box" style="display:none;">
+    <div class="logo">MyGram</div>
+
+    <input id="li_email" placeholder="Email">
+
+    <div class="pass-container">
+        <input id="li_password" type="password" placeholder="Password" style="padding-right:40px;">
+        <span onclick="toggleLoginPass()">👁️</span>
+    </div>
+
+    <button onclick="login()">Log In</button>
+
+    <div class="link-box">
+        Don't have an account?
+        <a href="#" onclick="switchToSignup()">Sign up</a>
+    </div>
+
+    <button onclick="toggleDark()">🌙 Dark Mode</button>
+</div>
+
+<!-- -------------------- FIREBASE -------------------- -->
+<script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+
+<script>
+// =========================================================
+//                 FIREBASE CONFIG
+// =========================================================
+// Replace with your Firebase project config
+const firebaseConfig = {
+    apiKey: "YOUR_KEY",
+    authDomain: "YOUR_KEY",
+    projectId: "YOUR_KEY",
+    storageBucket: "YOUR_KEY",
+    messagingSenderId: "YOUR_KEY",
+    appId: "YOUR_KEY"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// =========================================================
+//                UI SWITCHING
+// =========================================================
+function switchToLogin() {
+    signupBox.style.display = "none";
+    loginBox.style.display = "block";
+}
+
+function switchToSignup() {
+    loginBox.style.display = "none";
+    signupBox.style.display = "block";
+}
+
+// =========================================================
+//                DARK MODE
+// =========================================================
+function toggleDark() {
+    document.body.classList.toggle("dark");
+}
+
+// =========================================================
+//                PASSWORD STRENGTH
+// =========================================================
+function checkStrength() {
+    let p = su_password.value;
+    let box = document.getElementById("strength");
+
+    if (p.length < 6) {
+        box.style.color = "red";
+        box.textContent = "Weak password";
+    } else if (p.match(/[A-Z]/) && p.match(/[0-9]/)) {
+        box.style.color = "green";
+        box.textContent = "Strong password";
+    } else {
+        box.style.color = "orange";
+        box.textContent = "Medium strength";
+    }
+}
+
+// =========================================================
+//                SHOW / HIDE PASSWORD
+// =========================================================
+function toggleSignupPass() {
+    let p = document.getElementById("su_password");
+    p.type = (p.type === "password") ? "text" : "password";
+}
+
+function toggleLoginPass() {
+    let p = document.getElementById("li_password");
+    p.type = (p.type === "password") ? "text" : "password";
+}
+
+// =========================================================
+//                SIGNUP FUNCTION
+// =========================================================
+function signup() {
+    let email = su_email.value;
+    let pass = su_password.value;
+    let full = su_fullname.value;
+    let user = su_username.value;
+
+    if (!email || !pass || !full || !user) {
+        alert("Fill out all fields.");
+        return;
+    }
+
+    auth.createUserWithEmailAndPassword(email, pass)
+        .then(cred => {
+            return db.collection("users").doc(cred.user.uid).set({
+                email,
+                fullname: full,
+                username: user,
+                createdAt: new Date()
+            });
+        })
+        .then(() => {
+            alert("Account created!");
+            switchToLogin();
+        })
+        .catch(err => alert(err.message));
+}
+
+// =========================================================
+//                LOGIN FUNCTION
+// =========================================================
+function login() {
+    auth.signInWithEmailAndPassword(li_email.value, li_password.value)
+        .then(() => {
+            alert("Logged in successfully!");
+        })
+        .catch(err => alert(err.message));
+}
+</script>
+
+</body>
+</html>

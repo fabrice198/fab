@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Advanced Date Picker</title>
+<style>
+/* ---------- Container ---------- */
+.date-picker { 
+  display:flex; 
+  justify-content: space-between; 
+  gap: 5px; 
+  margin: 50px auto; 
+  width: 300px; 
+}
+
+/* ---------- Dropdowns ---------- */
+.date-picker select {
+  flex:1;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.date-picker select:hover { border-color: #0095f6; }
+.date-picker select:focus { 
+  outline:none; 
+  border-color: #0095f6; 
+  box-shadow: 0 0 5px #0095f6; 
+}
+
+/* ---------- Display ---------- */
+#selected-date { 
+  text-align: center; 
+  margin-top: 20px; 
+  color: #0095f6; 
+  font-weight: bold; 
+  font-size: 16px;
+}
+</style>
+</head>
+<body>
+
+<!-- ----------------- Date Picker ----------------- -->
+<div class="date-picker">
+  <select id="day"></select>
+  <select id="month"></select>
+  <select id="year"></select>
+</div>
+<div id="selected-date"></div>
+
+<script>
+// ---------- References ----------
+const daySelect = document.getElementById('day');
+const monthSelect = document.getElementById('month');
+const yearSelect = document.getElementById('year');
+const selectedDateDisplay = document.getElementById('selected-date');
+
+// ---------- Populate Months ----------
+const months = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December"
+];
+months.forEach((m,i)=>{
+  const opt = document.createElement("option");
+  opt.value = i+1; // 1-12
+  opt.text = m;
+  monthSelect.appendChild(opt);
+});
+
+// ---------- Populate Years ----------
+const currentYear = new Date().getFullYear();
+const minYear = currentYear - 120; // Optional: last 120 years
+for(let y=currentYear;y>=minYear;y--){
+  const opt = document.createElement("option");
+  opt.value = y;
+  opt.text = y;
+  yearSelect.appendChild(opt);
+}
+
+// ---------- Populate Days ----------
+function populateDays() {
+  const year = parseInt(yearSelect.value);
+  const month = parseInt(monthSelect.value);
+  daySelect.innerHTML = "";
+  const daysInMonth = new Date(year, month, 0).getDate(); // last day of month
+  for(let d=1; d<=daysInMonth; d++){
+    const opt = document.createElement("option");
+    opt.value = d;
+    opt.text = d;
+    daySelect.appendChild(opt);
+  }
+  updateSelectedDate();
+}
+
+// ---------- Display Selected Date ----------
+function updateSelectedDate() {
+  const day = daySelect.value.padStart(2,'0');
+  const month = monthSelect.value.padStart(2,'0');
+  const year = yearSelect.value;
+  selectedDateDisplay.textContent = `Selected Date: ${day}/${month}/${year}`;
+}
+
+// ---------- Initial Setup ----------
+yearSelect.value = currentYear;
+monthSelect.value = new Date().getMonth() + 1;
+populateDays();
+daySelect.value = new Date().getDate();
+
+// ---------- Event Listeners ----------
+monthSelect.addEventListener("change", populateDays);
+yearSelect.addEventListener("change", populateDays);
+daySelect.addEventListener("change", updateSelectedDate);
+
+</script>
+
+</body>
+</html>

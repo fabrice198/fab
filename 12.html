@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Interactive Hover Box</title>
+<style>
+body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f0f0f0;
+    font-family: Arial, sans-serif;
+}
+
+.hover-box {
+    width: 250px;
+    height: 250px;
+    background: #0095f6;
+    border-radius: 15px;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    transition: all 0.5s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.hover-box::after {
+    content: "Hovered!";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    transition: all 0.5s ease;
+    font-size: 22px;
+    color: yellow;
+}
+
+.hover-box:hover {
+    background: #ff3c3c;
+    transform: rotate(10deg) scale(1.1);
+    border-radius: 50px;
+}
+
+.hover-box:hover::after {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.hover-box span {
+    transition: opacity 0.5s ease;
+}
+
+.hover-box:hover span {
+    opacity: 0;
+}
+</style>
+</head>
+<body>
+
+<div class="hover-box" id="hoverBox">
+    <span>Hover me!</span>
+</div>
+
+<script>
+// JavaScript content swap (optional)
+const box = document.getElementById("hoverBox");
+
+box.addEventListener("mouseenter", () => {
+    // You can also change HTML content
+    box.querySelector("span").textContent = "Surprise!";
+});
+
+box.addEventListener("mouseleave", () => {
+    box.querySelector("span").textContent = "Hover me!";
+});
+</script>
+
+</body>
+</html>
